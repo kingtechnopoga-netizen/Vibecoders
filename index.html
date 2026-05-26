@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="VibeCodersAI — your premium AI coding and creative assistant." />
+  <meta name="theme-color" content="#0a0508" />
+  <title>VibeCodersAI — Premium AI Coding & Creative Assistant</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ff2a4d'/%3E%3Cstop offset='1' stop-color='%23700014'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M32 4l24 14v28L32 60 8 46V18z'/%3E%3Cpath fill='%23fff' fill-opacity='.85' d='M32 18l4 8 8 1-6 6 1 8-7-4-7 4 1-8-6-6 8-1z'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-theme="dark">
+  <!-- ============ HEADER ============ -->
+  <header class="topbar" role="banner">
+    <div class="topbar-inner">
+      <button class="icon-btn" id="menuBtn" aria-label="Open menu" title="Menu">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="currentColor" d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z"/>
+        </svg>
+      </button>
+
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="28" height="28">
+            <defs>
+              <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0" stop-color="#ff2a4d"/>
+                <stop offset="1" stop-color="#5e0010"/>
+              </linearGradient>
+            </defs>
+            <path fill="url(#bg)" d="M32 4l24 14v28L32 60 8 46V18z"/>
+            <path fill="rgba(255,255,255,.85)" d="M32 18l4 8 8 1-6 6 1 8-7-4-7 4 1-8-6-6 8-1z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>VibeCodersAI</h1>
+          <span class="brand-sub">premium AI assistant</span>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <span id="providerBadge" class="provider-badge" title="Last provider used">idle</span>
+        <button class="icon-btn" id="newChatBtn" aria-label="New chat" title="New chat">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" id="settingsBtn" aria-label="Open settings" title="Settings">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path fill="currentColor" d="M19.14 12.94a7.14 7.14 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.07 7.07 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.07 7.07 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.14 7.14 0 0 0 0 1.88L2.83 14.52a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main" role="main">
+    <!-- Empty state / welcome -->
+    <section id="welcome" class="welcome">
+      <div class="welcome-card">
+        <div class="welcome-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <defs>
+              <linearGradient id="wg" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0" stop-color="#ff3a5c"/>
+                <stop offset="1" stop-color="#4d000d"/>
+              </linearGradient>
+            </defs>
+            <path fill="url(#wg)" d="M32 4l24 14v28L32 60 8 46V18z"/>
+            <path fill="rgba(255,255,255,.9)" d="M32 18l4 8 8 1-6 6 1 8-7-4-7 4 1-8-6-6 8-1z"/>
+          </svg>
+        </div>
+        <h2>Welcome to VibeCodersAI — your premium AI coding and creative assistant.</h2>
+        <p class="welcome-sub">Pick a mode below or just start chatting. Your conversation stays on your device.</p>
+
+        <div class="chips" id="quickPrompts" role="list" aria-label="Quick prompts">
+          <button class="chip" data-prompt="Write a clean responsive HTML/CSS landing page for a coffee shop." role="listitem">Landing page idea</button>
+          <button class="chip" data-prompt="Explain JavaScript promises and async/await with an example." role="listitem">Explain promises</button>
+          <button class="chip" data-prompt="Magsulat ka ng maikling caption sa Tagalog para sa bagong product launch." role="listitem">Tagalog caption</button>
+          <button class="chip" data-prompt="Improve this prompt for an AI image generator: a futuristic red crystal city at night." role="listitem">Improve prompt</button>
+          <button class="chip" data-prompt="Generate a 30-second TikTok voiceover script about staying motivated." role="listitem">Reels script</button>
+          <button class="chip" data-prompt="Debug this JS: function add(a,b){return a-b}" role="listitem">Debug code</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chat messages -->
+    <section id="chat" class="chat" aria-live="polite" aria-label="Chat messages"></section>
+
+    <!-- Loading indicator -->
+    <div id="loading" class="loading" hidden>
+      <div class="loading-bubble">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="loading-text">VibeCodersAI is thinking...</span>
+      </div>
+    </div>
+
+    <!-- Error banner -->
+    <div id="errorBar" class="error-bar" hidden>
+      <span id="errorText"></span>
+      <button id="retryBtn" class="link-btn">Retry</button>
+    </div>
+  </main>
+
+  <!-- ============ INPUT BAR ============ -->
+  <footer class="composer" role="contentinfo">
+    <div class="composer-inner">
+      <div class="composer-row">
+        <textarea
+          id="input"
+          class="composer-input"
+          rows="1"
+          maxlength="8000"
+          placeholder="Message VibeCodersAI..."
+          aria-label="Message input"
+        ></textarea>
+
+        <button id="stopBtn" class="composer-btn stop-btn" hidden aria-label="Stop generating" title="Stop">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <button id="sendBtn" class="composer-btn send-btn" aria-label="Send message" title="Send">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path fill="currentColor" d="M2 21l21-9L2 3v7l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="composer-meta">
+        <span class="meta-mode" id="metaMode">Normal Chat</span>
+        <span class="meta-sep">·</span>
+        <span class="meta-model" id="metaModel">openrouter/auto</span>
+        <span class="counter" id="counter">0 / 8000</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ SETTINGS PANEL ============ -->
+  <aside id="settingsPanel" class="panel" aria-hidden="true" aria-label="Settings panel">
+    <div class="panel-card">
+      <div class="panel-header">
+        <h3>Settings</h3>
+        <button class="icon-btn" id="closeSettings" aria-label="Close settings">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path fill="currentColor" d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="panel-section">
+        <label for="modeSelect">Mode</label>
+        <select id="modeSelect" class="select">
+          <option value="chat">Normal Chat</option>
+          <option value="coding">Coding Assistant</option>
+          <option value="tagalog">Tagalog Assistant</option>
+          <option value="creative">Creative Writer</option>
+          <option value="prompt">Prompt Engineer</option>
+          <option value="business">Business Helper</option>
+          <option value="builder">Web App Builder Helper</option>
+        </select>
+      </div>
+
+      <div class="panel-section">
+        <label for="modelSelect">Model</label>
+        <select id="modelSelect" class="select">
+          <optgroup label="OpenRouter">
+            <option value="openrouter/auto">openrouter/auto</option>
+            <option value="deepseek/deepseek-chat">deepseek/deepseek-chat</option>
+            <option value="meta-llama/llama-3.1-8b-instruct">meta-llama/llama-3.1-8b-instruct</option>
+            <option value="mistralai/mistral-7b-instruct">mistralai/mistral-7b-instruct</option>
+          </optgroup>
+          <optgroup label="Groq">
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+          </optgroup>
+          <optgroup label="Gemini">
+            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+          </optgroup>
+          <optgroup label="Fallback">
+            <option value="pollinations">pollinations (no key)</option>
+          </optgroup>
+        </select>
+        <p class="hint">If your selected provider fails, VibeCodersAI auto-falls-back to the next available one.</p>
+      </div>
+
+      <div class="panel-section">
+        <label>Theme</label>
+        <div class="row">
+          <button class="ghost-btn" id="themeDark">Dark</button>
+          <button class="ghost-btn" id="themeLight">Light</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <label>Chat data</label>
+        <div class="row">
+          <button class="ghost-btn" id="exportBtn">Export .txt</button>
+          <button class="ghost-btn" id="clearBtn">Clear chat</button>
+        </div>
+        <div class="row">
+          <button class="ghost-btn danger" id="resetBtn">Reset settings</button>
+        </div>
+      </div>
+
+      <div class="panel-section donate">
+        <h4>Support VibeCodersAI</h4>
+        <p>If this tool helps you, you can donate any amount.</p>
+        <p><strong>GCash:</strong> 09482887486</p>
+      </div>
+
+      <div class="panel-footer">
+        <small>VibeCodersAI · v1.0</small>
+      </div>
+    </div>
+    <div class="panel-backdrop" id="panelBackdrop"></div>
+  </aside>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
