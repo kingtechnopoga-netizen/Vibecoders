@@ -1,19 +1,24 @@
 /* =========================================================
    VibeCodersAI — Frontend logic
-   No API keys here. All AI calls go through the Cloudflare
-   Worker proxy at BACKEND_URL.
+   No API keys here. All premium AI calls go through the
+   Cloudflare Worker proxy at BACKEND_URL.
+
+   If no backend is configured (or it fails), we fall back to
+   Pollinations AI directly from the browser — Pollinations is
+   designed to be called publicly with no API key.
    ========================================================= */
 
 // ============================================================
-//  Backend URL resolution — pick the FIRST available source.
+//  Backend URL resolution
 // ============================================================
 // 1. Runtime override:   <script>window.VIBECODERSAI_BACKEND_URL = "..."</script>
-// 2. Same-origin proxy:  if your host (Netlify/Vercel/your-domain) rewrites
-//                        /api/chat to your Cloudflare Worker, leave this as-is.
-// 3. Direct Worker URL:  edit DIRECT_WORKER_URL below to your Worker URL,
-//                        e.g. https://vibecodersai.YOUR-SUBDOMAIN.workers.dev/api/chat
+// 2. Direct Worker URL:  edit DIRECT_WORKER_URL below.
+// 3. Same-origin proxy:  /api/chat (e.g. via netlify.toml / vercel.json).
+// 4. None of the above:  the app still works using the public Pollinations
+//                        fallback (no premium providers, no rate-limit guard,
+//                        but it's a real AI response — not a demo).
 //
-// API keys NEVER live here. They are only on the Cloudflare Worker.
+// Premium API keys (OpenRouter / Groq / Gemini) NEVER live here.
 const DIRECT_WORKER_URL =
   "https://your-worker-name.your-subdomain.workers.dev/api/chat";
 
@@ -21,17 +26,16 @@ const BACKEND_URL = (function resolveBackendUrl() {
   if (typeof window !== "undefined" && typeof window.VIBECODERSAI_BACKEND_URL === "string" && window.VIBECODERSAI_BACKEND_URL) {
     return window.VIBECODERSAI_BACKEND_URL;
   }
-  // If the deploy target is not a generic static host (e.g. you set up a
-  // Netlify/Vercel rewrite, or are serving the worker on the same domain),
-  // a relative URL works without any edits.
   if (!DIRECT_WORKER_URL.includes("your-worker-name")) {
     return DIRECT_WORKER_URL;
   }
-  // Default to same-origin /api/chat — works automatically when you've
-  // configured a rewrite in netlify.toml / vercel.json, or routed your
-  // worker on your own domain.
+  // Same-origin /api/chat — works automatically when a host (Netlify/Vercel)
+  // proxies it to your Worker, or when you serve the worker on your domain.
   return "/api/chat";
 })();
+
+// True only when the page-author hasn't set up a real backend yet.
+const BACKEND_CONFIGURED = !BACKEND_URL.includes("your-worker-name");
 
 // ----- Storage keys -----
 const LS = {
@@ -111,6 +115,15 @@ function init() {
   updateCounter();
   bindEvents();
   autoResize();
+
+  // If no premium backend is configured, set the badge so the user knows
+  // we're in direct-fallback mode (still real AI, just no premium models).
+  if (!BACKEND_CONFIGURED) {
+    providerBadge.textContent = "free mode";
+    providerBadge.title =
+      "No backend configured — using free Pollinations AI directly. " +
+      "Deploy worker.js to Cloudflare and add API keys to enable premium models.";
+  }
 }
 
 function pickValidOption(selectEl, value) {
@@ -445,6 +458,71 @@ async function regenerateLast() {
   await sendToBackend(state.history[idx].content, { resend: true });
 }
 
+// =========================================================
+//  System prompts (mirrors worker MODE_PROMPTS) — used by the
+//  client-side Pollinations fallback when no backend is set.
+// =========================================================
+const CLIENT_MODE_PROMPTS = {
+  chat:
+    "You are VibeCodersAI, a premium, friendly, concise general assistant. " +
+    "Answer clearly. Use Markdown when helpful.",
+  coding:
+    "You are VibeCodersAI Coding Assistant. Explain, generate, debug, and " +
+    "fix HTML, CSS, JavaScript, Python, Node, React, PHP, XML, YAML, JSON, " +
+    "and Markdown. Always give complete, copy-paste-ready code in fenced " +
+    "blocks with the correct language tag.",
+  tagalog:
+    "Ikaw ay VibeCodersAI. Sumagot ka nang natural sa Tagalog o Taglish " +
+    "kapag Tagalog ang user. Linaw, bait, at tama lagi.",
+  creative:
+    "You are VibeCodersAI Creative Writer. Produce vivid scripts, stories, " +
+    "captions, reels ideas, and voiceover scripts. Be original and engaging.",
+  prompt:
+    "You are VibeCodersAI Prompt Engineer. Improve user prompts and craft " +
+    "high-quality prompts for AI image, video, and app builders.",
+  business:
+    "You are VibeCodersAI Business Helper. Write polished bios, product " +
+    "descriptions, marketing copy, and Facebook page content.",
+  builder:
+    "You are VibeCodersAI Web App Builder Helper. Help build full apps in " +
+    "HTML, CSS, JS, React, Node, Python, PHP. Give complete copy-paste code.",
+};
+
+// Client-side Pollinations call (no API key needed). Used when:
+//  - the page author hasn't deployed a backend yet, OR
+//  - the configured backend errored out for this request.
+async function callPollinationsDirect({ message, mode, history, signal }) {
+  const sys = CLIENT_MODE_PROMPTS[mode] || CLIENT_MODE_PROMPTS.chat;
+  const lines = [sys, ""];
+  if (Array.isArray(history)) {
+    for (const h of history.slice(-12)) {
+      if (!h || typeof h.content !== "string") continue;
+      const who = h.role === "assistant" ? "Assistant" : "User";
+      lines.push(`${who}: ${h.content.slice(0, 4000)}`);
+    }
+  }
+  lines.push(`User: ${message}`);
+  lines.push("Assistant:");
+  const prompt = lines.join("\n");
+
+  // Pollinations GET endpoint: returns plain text, anonymous-friendly,
+  // CORS-open. No API key. https://pollinations.ai
+  const url =
+    "https://text.pollinations.ai/" +
+    encodeURIComponent(prompt) +
+    "?model=openai";
+
+  const res = await fetch(url, { method: "GET", signal });
+  if (!res.ok) {
+    throw new Error(`Pollinations ${res.status}`);
+  }
+  const txt = await res.text();
+  if (!txt || !txt.trim()) {
+    throw new Error("Empty reply from fallback service.");
+  }
+  return txt.trim();
+}
+
 async function sendToBackend(message, opts = {}) {
   setPending(true);
   showLoading(true);
@@ -452,7 +530,6 @@ async function sendToBackend(message, opts = {}) {
   // History to send: everything BEFORE the most recent user message,
   // so the backend sees the conversation context.
   const histForBackend = [];
-  // We send all but the last user message (which is "message")
   let foundLastUser = false;
   for (let i = state.history.length - 1; i >= 0; i--) {
     const m = state.history[i];
@@ -462,51 +539,68 @@ async function sendToBackend(message, opts = {}) {
 
   state.abortCtrl = new AbortController();
 
-  try {
-    if (BACKEND_URL.includes("your-worker-name")) {
-      throw new Error(
-        "Backend not configured. Set DIRECT_WORKER_URL in script.js, or deploy a same-origin /api/chat rewrite (see netlify.toml / vercel.json)."
-      );
-    }
+  // ---- Path 1: real backend is configured. Try it first. ----
+  if (BACKEND_CONFIGURED) {
+    try {
+      const res = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          model: state.model,
+          mode: state.mode,
+          history: histForBackend,
+        }),
+        signal: state.abortCtrl.signal,
+      });
 
-    const res = await fetch(BACKEND_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        model: state.model,
-        mode: state.mode,
-        history: histForBackend,
-      }),
+      let data;
+      try { data = await res.json(); }
+      catch { throw new Error("Unexpected response from server."); }
+
+      if (data && data.success === true && typeof data.reply === "string") {
+        appendMessage("assistant", data.reply, { meta: data.provider || null });
+        if (data.provider) {
+          providerBadge.textContent = data.provider;
+          providerBadge.title = `Last provider: ${data.provider}`;
+        }
+        state.abortCtrl = null;
+        setPending(false);
+        showLoading(false);
+        return;
+      }
+      // Backend responded but failed — fall through to client fallback.
+    } catch (err) {
+      if (err && err.name === "AbortError") {
+        hideError();
+        state.abortCtrl = null;
+        setPending(false);
+        showLoading(false);
+        return;
+      }
+      // Network error — fall through to client fallback.
+    }
+  }
+
+  // ---- Path 2: client-side Pollinations fallback. ----
+  // Used when no backend is configured, or when the backend failed.
+  try {
+    const reply = await callPollinationsDirect({
+      message,
+      mode: state.mode,
+      history: histForBackend,
       signal: state.abortCtrl.signal,
     });
-
-    let data;
-    try {
-      data = await res.json();
-    } catch {
-      throw new Error("Unexpected response from server.");
-    }
-
-    if (!data || data.success !== true || typeof data.reply !== "string") {
-      const friendly =
-        (data && typeof data.error === "string" && data.error) ||
-        "Sorry, the AI service is temporarily unavailable. Please try again.";
-      throw new Error(friendly);
-    }
-
-    appendMessage("assistant", data.reply, { meta: data.provider || null });
-    if (data.provider) {
-      providerBadge.textContent = data.provider;
-      providerBadge.title = `Last provider: ${data.provider}`;
-    }
+    appendMessage("assistant", reply, { meta: "pollinations (direct)" });
+    providerBadge.textContent = "pollinations";
+    providerBadge.title = BACKEND_CONFIGURED
+      ? "Backend was unreachable; used direct fallback."
+      : "Direct fallback (deploy the worker for premium providers).";
   } catch (err) {
     if (err && err.name === "AbortError") {
-      // user pressed stop
       hideError();
     } else {
-      const msg = friendlyError(err);
-      showError(msg);
+      showError(friendlyError(err));
     }
   } finally {
     state.abortCtrl = null;
@@ -517,12 +611,10 @@ async function sendToBackend(message, opts = {}) {
 
 function friendlyError(err) {
   const raw = (err && err.message) || "";
-  if (raw.includes("Backend not configured")) return raw;
   if (raw.toLowerCase().includes("failed to fetch") ||
       raw.toLowerCase().includes("networkerror")) {
     return "Network error. Please check your connection and try again.";
   }
-  if (raw && raw.length < 200) return raw;
   return "Sorry, something went wrong. Please try again.";
 }
 

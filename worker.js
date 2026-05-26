@@ -261,52 +261,62 @@ async function callGemini(env, { message, model, systemPrompt, history }) {
 }
 
 // ---- Provider: Pollinations (no key required) -----------------------------
+// We prefer the simple GET endpoint with encoded prompt — it returns clean
+// plain-text responses for anonymous users. If that fails, we try the
+// OpenAI-compatible POST endpoint as a backup.
 async function callPollinations(_env, { message, systemPrompt, history }) {
-  // OpenAI-compatible endpoint, no key needed.
-  const messages = buildOpenAIMessages(systemPrompt, history, message);
+  // Build a single prompt from system + last few turns + user message.
+  const ctxLines = [systemPrompt, ""];
+  if (Array.isArray(history)) {
+    for (const h of history.slice(-MAX_HISTORY)) {
+      if (!h || typeof h.content !== "string") continue;
+      const who = h.role === "assistant" ? "Assistant" : "User";
+      ctxLines.push(`${who}: ${h.content.slice(0, MAX_MESSAGE_LEN)}`);
+    }
+  }
+  ctxLines.push(`User: ${message}`);
+  ctxLines.push("Assistant:");
+  const prompt = ctxLines.join("\n");
 
-  const res = await fetchWithTimeout(
+  // 1. GET endpoint — most reliable for anonymous use.
+  const getUrl =
+    "https://text.pollinations.ai/" +
+    encodeURIComponent(prompt) +
+    "?model=openai";
+  try {
+    const res = await fetchWithTimeout(getUrl, { method: "GET" });
+    if (res.ok) {
+      const txt = await res.text();
+      if (txt && txt.trim()) return txt.trim();
+    }
+  } catch (_) { /* fall through */ }
+
+  // 2. POST endpoint as backup.
+  const messages = buildOpenAIMessages(systemPrompt, history, message);
+  const res2 = await fetchWithTimeout(
     "https://text.pollinations.ai/openai",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "openai",
-        messages,
-        temperature: 0.7,
-      }),
+      body: JSON.stringify({ model: "openai", messages, temperature: 0.7 }),
     }
   );
-
-  if (res.ok) {
-    // Some Pollinations responses are JSON, some are plain text.
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("application/json")) {
-      const data = await res.json();
-      const reply =
-        data?.choices?.[0]?.message?.content ||
-        data?.choices?.[0]?.text ||
-        "";
-      if (reply) return reply.trim();
-    } else {
-      const txt = await res.text();
-      if (txt && txt.trim()) return txt.trim();
-    }
-  }
-
-  // Fallback to the simple GET endpoint with encoded prompt.
-  const prompt = `${systemPrompt}\n\nUser: ${message}\nAssistant:`;
-  const url2 =
-    "https://text.pollinations.ai/" +
-    encodeURIComponent(prompt) +
-    "?model=openai";
-  const res2 = await fetchWithTimeout(url2, { method: "GET" });
   if (!res2.ok) {
     throw new Error(`Pollinations ${res2.status}`);
   }
-  const txt2 = await res2.text();
-  if (!txt2 || !txt2.trim()) throw new Error("Pollinations: empty reply");
-  return txt2.trim();
+  const ct = res2.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    const data = await res2.json();
+    const reply =
+      data?.choices?.[0]?.message?.content ||
+      data?.choices?.[0]?.text ||
+      "";
+    if (reply) return reply.trim();
+  } else {
+    const txt = await res2.text();
+    if (txt && txt.trim()) return txt.trim();
+  }
+  throw new Error("Pollinations: empty reply");
 }
 
 // ---- Dispatcher ------------------------------------------------------------
