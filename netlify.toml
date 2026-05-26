@@ -1,0 +1,14 @@
+# Netlify config for VibeCodersAI static frontend.
+#
+# Edit the "to" URL below to your deployed Cloudflare Worker.
+# Once edited, the frontend can call /api/chat directly and you
+# never need to touch BACKEND_URL in script.js.
+
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/api/chat"
+  to   = "https://vibecodersai.YOUR-SUBDOMAIN.workers.dev/api/chat"
+  status = 200
+  force  = true

@@ -4,10 +4,34 @@
    Worker proxy at BACKEND_URL.
    ========================================================= */
 
-// ⚠️ Replace this with your deployed Cloudflare Worker URL.
-//    The /api/chat path is required.
-const BACKEND_URL =
+// ============================================================
+//  Backend URL resolution — pick the FIRST available source.
+// ============================================================
+// 1. Runtime override:   <script>window.VIBECODERSAI_BACKEND_URL = "..."</script>
+// 2. Same-origin proxy:  if your host (Netlify/Vercel/your-domain) rewrites
+//                        /api/chat to your Cloudflare Worker, leave this as-is.
+// 3. Direct Worker URL:  edit DIRECT_WORKER_URL below to your Worker URL,
+//                        e.g. https://vibecodersai.YOUR-SUBDOMAIN.workers.dev/api/chat
+//
+// API keys NEVER live here. They are only on the Cloudflare Worker.
+const DIRECT_WORKER_URL =
   "https://your-worker-name.your-subdomain.workers.dev/api/chat";
+
+const BACKEND_URL = (function resolveBackendUrl() {
+  if (typeof window !== "undefined" && typeof window.VIBECODERSAI_BACKEND_URL === "string" && window.VIBECODERSAI_BACKEND_URL) {
+    return window.VIBECODERSAI_BACKEND_URL;
+  }
+  // If the deploy target is not a generic static host (e.g. you set up a
+  // Netlify/Vercel rewrite, or are serving the worker on the same domain),
+  // a relative URL works without any edits.
+  if (!DIRECT_WORKER_URL.includes("your-worker-name")) {
+    return DIRECT_WORKER_URL;
+  }
+  // Default to same-origin /api/chat — works automatically when you've
+  // configured a rewrite in netlify.toml / vercel.json, or routed your
+  // worker on your own domain.
+  return "/api/chat";
+})();
 
 // ----- Storage keys -----
 const LS = {
@@ -441,7 +465,7 @@ async function sendToBackend(message, opts = {}) {
   try {
     if (BACKEND_URL.includes("your-worker-name")) {
       throw new Error(
-        "Backend URL not set. Replace BACKEND_URL in script.js with your Cloudflare Worker URL."
+        "Backend not configured. Set DIRECT_WORKER_URL in script.js, or deploy a same-origin /api/chat rewrite (see netlify.toml / vercel.json)."
       );
     }
 
@@ -493,7 +517,7 @@ async function sendToBackend(message, opts = {}) {
 
 function friendlyError(err) {
   const raw = (err && err.message) || "";
-  if (raw.includes("Backend URL not set")) return raw;
+  if (raw.includes("Backend not configured")) return raw;
   if (raw.toLowerCase().includes("failed to fetch") ||
       raw.toLowerCase().includes("networkerror")) {
     return "Network error. Please check your connection and try again.";

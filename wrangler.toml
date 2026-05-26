@@ -1,0 +1,11 @@
+name = "vibecodersai"
+main = "worker.js"
+compatibility_date = "2024-10-01"
+
+# Secrets are NOT set here. Add them after deploy with:
+#   wrangler secret put OPENROUTER_API_KEY
+#   wrangler secret put GROQ_API_KEY
+#   wrangler secret put GEMINI_API_KEY
+#
+# You can skip any provider you don't have a key for.
+# Pollinations always works as a final fallback with no key.

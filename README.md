@@ -18,6 +18,26 @@ the browser.
 
 ---
 
+## ⚡ One-click deploy
+
+| Backend (Cloudflare Worker) | Frontend (static site) |
+|---|---|
+| [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/kingtechnopoga-netizen/Vibecoders) | [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/kingtechnopoga-netizen/Vibecoders) |
+|  | [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/kingtechnopoga-netizen/Vibecoders) |
+|  | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/kingtechnopoga-netizen/Vibecoders) |
+
+After clicking the buttons, you still need to do **two** things only you can do:
+
+1. Add your AI provider keys as Cloudflare Worker secrets (see §2.3 below).
+2. Point the frontend at your Worker URL — choose **one**:
+   - **Easiest:** edit `netlify.toml` / `vercel.json` and replace
+     `https://vibecodersai.YOUR-SUBDOMAIN.workers.dev/api/chat` with your real
+     Worker URL. The frontend already calls `/api/chat` and will be proxied.
+   - **Manual:** edit `DIRECT_WORKER_URL` in `script.js`.
+   - **Runtime:** add `<script>window.VIBECODERSAI_BACKEND_URL="https://..."</script>` before `script.js`.
+
+---
+
 ## 1. File overview
 
 ```
@@ -26,6 +46,9 @@ the browser.
 ├── style.css       # Premium red crystal UI
 ├── script.js       # Frontend logic (calls the Worker, no API keys here)
 ├── worker.js       # Cloudflare Worker backend proxy
+├── wrangler.toml   # Cloudflare Worker config (one-command deploy)
+├── netlify.toml    # Optional same-origin /api/chat rewrite for Netlify
+├── vercel.json     # Optional same-origin /api/chat rewrite for Vercel
 └── README.md       # This file
 ```
 
@@ -35,72 +58,77 @@ the browser.
 
 You need a free Cloudflare account.
 
-### Option A — One-time deploy with Wrangler CLI (recommended)
+### 2.1 One-time deploy with Wrangler CLI (recommended)
 
-1. Install Node.js 18+ and Wrangler:
-   ```bash
-   npm install -g wrangler
-   wrangler login
-   ```
+`wrangler.toml` is already included, so this is two commands:
 
-2. From the project folder, create a minimal `wrangler.toml`:
-   ```toml
-   name = "vibecodersai"
-   main = "worker.js"
-   compatibility_date = "2024-10-01"
-   ```
+```bash
+npm install -g wrangler
+wrangler login
+wrangler deploy
+```
 
-3. Add your secrets (run each, paste the key when prompted):
-   ```bash
-   wrangler secret put OPENROUTER_API_KEY
-   wrangler secret put GROQ_API_KEY
-   wrangler secret put GEMINI_API_KEY
-   ```
-   You can skip any provider you don't have a key for — Pollinations always
-   works as a fallback.
+Wrangler prints your Worker URL, e.g.:
+```
+https://vibecodersai.YOUR-SUBDOMAIN.workers.dev
+```
+Your chat endpoint is that URL + `/api/chat`.
 
-4. Deploy:
-   ```bash
-   wrangler deploy
-   ```
+### 2.2 Deploy via Cloudflare dashboard
 
-5. Wrangler will print your Worker URL, e.g.:
-   ```
-   https://vibecodersai.YOUR-SUBDOMAIN.workers.dev
-   ```
-   Your chat endpoint is:
-   ```
-   https://vibecodersai.YOUR-SUBDOMAIN.workers.dev/api/chat
-   ```
+1. **Workers & Pages → Create application → Create Worker**.
+2. Name it `vibecodersai`.
+3. **Edit code**, paste the contents of `worker.js`, **Save and deploy**.
 
-### Option B — Cloudflare dashboard
+### 2.3 Add your API keys as secrets
 
-1. Go to **Workers & Pages → Create application → Create Worker**.
-2. Name it `vibecodersai` (or anything you like).
-3. Click **Edit code**, paste the contents of `worker.js`, click **Save and deploy**.
-4. Open the worker → **Settings → Variables → Environment Variables**.
-5. Add **Encrypted** variables:
-   - `OPENROUTER_API_KEY`
-   - `GROQ_API_KEY`
-   - `GEMINI_API_KEY`
-   (Skip any you don't have.)
-6. Re-deploy if prompted.
+```bash
+wrangler secret put OPENROUTER_API_KEY
+wrangler secret put GROQ_API_KEY
+wrangler secret put GEMINI_API_KEY
+```
 
-Test the deployment by visiting the worker root URL in a browser — you should
-see `VibeCodersAI backend is running.`
+Or in the dashboard: **Worker → Settings → Variables → Environment Variables → Add variable** (mark each as **Encrypt**).
+
+You can skip any provider you don't have a key for — Pollinations works as a
+fallback with no key.
+
+Test the deployment by visiting your Worker root URL — you should see
+`VibeCodersAI backend is running.`
 
 ---
 
 ## 3. Connect the frontend to the backend
 
-Open `script.js` and update the `BACKEND_URL` constant near the top:
+Pick **one** of these — easiest first:
+
+### Option A — Same-origin rewrite (no JS edit)
+
+If you deploy the frontend to Netlify or Vercel, just replace the placeholder
+URL in the included config file:
+
+- **Netlify:** edit `netlify.toml` → replace `https://vibecodersai.YOUR-SUBDOMAIN.workers.dev/api/chat` with your real Worker URL.
+- **Vercel:** edit `vercel.json` → same replacement.
+
+The frontend already calls `/api/chat` on its own origin, and the host
+proxies it to your Worker. No `script.js` edit needed.
+
+### Option B — Edit `script.js`
+
+Open `script.js` and update `DIRECT_WORKER_URL`:
 
 ```js
-const BACKEND_URL =
+const DIRECT_WORKER_URL =
   "https://vibecodersai.YOUR-SUBDOMAIN.workers.dev/api/chat";
 ```
 
-That's the only change you need on the frontend.
+### Option C — Runtime override (no rebuild)
+
+In `index.html`, before `<script src="script.js" defer></script>`:
+
+```html
+<script>window.VIBECODERSAI_BACKEND_URL = "https://your-worker.workers.dev/api/chat";</script>
+```
 
 ---
 
@@ -155,7 +183,7 @@ host works.
 
 | Problem | Fix |
 |---|---|
-| `Backend URL not set.` shown in the chat | You forgot to update `BACKEND_URL` in `script.js`. |
+| `Backend not configured.` shown in the chat | You haven't pointed the frontend at a real Worker URL. See §3 — pick Option A, B, or C. |
 | `Network error. Please check your connection...` | Worker URL is wrong, or CORS is blocked. Verify the URL by visiting it directly — it should say `VibeCodersAI backend is running.` |
 | `Sorry, the AI service is temporarily unavailable.` | All configured providers failed. Check your Cloudflare Worker logs (`wrangler tail`) and verify your secrets are set. Pollinations should still work as a fallback even with no keys. |
 | `You're sending messages too quickly.` | Built-in rate limit (30 req / minute / IP). Wait a moment. |
