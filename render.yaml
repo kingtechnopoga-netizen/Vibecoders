@@ -1,0 +1,32 @@
+# VibeCodersAI — Render Blueprint
+# https://render.com/docs/blueprint-spec
+#
+# This file makes deploying to Render a one-click action.
+# Render will detect this file and pre-fill every setting.
+
+services:
+  - type: web
+    name: vibecodersai
+    runtime: static
+    buildCommand: ""           # no build step — pure static files
+    staticPublishPath: .       # serve repo root
+    pullRequestPreviewsEnabled: false
+
+    # Long-cache static assets (CSS / JS), but always fetch latest HTML so
+    # users get new code immediately when you push.
+    headers:
+      - path: /*.css
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*.js
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
